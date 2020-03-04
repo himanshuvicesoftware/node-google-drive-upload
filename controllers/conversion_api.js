@@ -6,7 +6,7 @@ const { authorize, storeFiles } = require("../utils/uploadToDrive");
 const path = require("path");
 
 const convertAndUploadPdfFile = (req, res) => {
-  const { filename, url } = req.body;
+  const { fileName, url } = req.body;
   axios
     .get(url)
     .then(async response => {
@@ -23,7 +23,7 @@ const convertAndUploadPdfFile = (req, res) => {
       await fs.promises
         .mkdir(path.join(__dirname, "../pdfs"), { recursive: true })
         .then(() => {
-          doc.pipe(fs.createWriteStream(`pdfs/${filename}.pdf`));
+          doc.pipe(fs.createWriteStream(`pdfs/${fileName}.pdf`));
         })
         .catch(err => console.error(err));
 
@@ -39,7 +39,7 @@ const convertAndUploadPdfFile = (req, res) => {
 };
 
 const convertAndSaveDocFile = (req, res) => {
-  const { filename, url } = req.body;
+  const { fileName, url } = req.body;
   axios.get(url).then(response => {
     const doc = new Document();
 
@@ -61,7 +61,7 @@ const convertAndSaveDocFile = (req, res) => {
       .then(async buffer => {
         await fs.promises
           .mkdir(path.join(__dirname, "../docs"), { recursive: true })
-          .then(() => fs.writeFileSync(`docs/${filename}.docx`, buffer));
+          .then(() => fs.writeFileSync(`docs/${fileName}.docx`, buffer));
         res.send("Successfully converted to doc file.");
       })
       .catch(err => {

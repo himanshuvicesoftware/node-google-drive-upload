@@ -43,11 +43,11 @@ const getAccessToken = async (oAuth2Client, callback, res) => {
 const storeFiles = (auth, req, res) => {
   const drive = google.drive({ version: "v3", auth });
   let fileMetadata = {
-    name: `${req.body.filename}.pdf`
+    name: `${req.body.fileName}.pdf`
   };
   let media = {
     mimeType: "application/pdf",
-    body: fs.createReadStream(`pdfs/${req.body.filename}.pdf`)
+    body: fs.createReadStream(`pdfs/${req.body.fileName}.pdf`)
   };
 
   drive.files.create(
