@@ -2,13 +2,14 @@ const axios = require("axios");
 const pdfKit = require("pdfkit");
 const fs = require("fs");
 const { Document, Paragraph, TextRun, Packer } = require("docx");
+const { authorize, storeFiles } = require("../utils/uploadToDrive");
+const path = require("path");
 
-const { authorize, storeFiles } = require("../uploadToDrive");
-
-const convertAndUploadFile = (req, res) => {
+const convertAndUploadPdfFile = (req, res) => {
+  const { filename, url } = req.body;
   axios
-    .get("https://jsonplaceholder.typicode.com/posts")
-    .then(response => {
+    .get(url)
+    .then(async response => {
       const doc = new pdfKit({
         layout: "portrait",
         margins: { top: 50, bottom: 50, left: 72, right: 72 },
@@ -19,7 +20,13 @@ const convertAndUploadFile = (req, res) => {
         }
       });
 
-      doc.pipe(fs.createWriteStream("pdfs/test.pdf"));
+      await fs.promises
+        .mkdir(path.join(__dirname, "../pdfs"), { recursive: true })
+        .then(() => {
+          doc.pipe(fs.createWriteStream(`pdfs/${filename}.pdf`));
+        })
+        .catch(err => console.error(err));
+
       response.data.forEach(data => {
         doc.text(data.userId);
         doc.text(data.id);
@@ -28,40 +35,43 @@ const convertAndUploadFile = (req, res) => {
       });
       doc.end();
     })
-    .then(async () => {
-      return await authorize(storeFiles, res);
-    });
+    .then(() => authorize(storeFiles, req, res));
 };
 
 const convertAndSaveDocFile = (req, res) => {
-  axios
-    .get("https://jsonplaceholder.typicode.com/posts")
-    .then(response => {
-      const doc = new Document();
+  const { filename, url } = req.body;
+  axios.get(url).then(response => {
+    const doc = new Document();
 
-      response.data.forEach(data => {
-        doc.addSection({
-          properties: {},
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({ text: data.userId }).break(),
-                new TextRun({ text: data.id }).break(),
-                new TextRun({ text: data.title }).break(),
-                new TextRun({ text: data.body }).break()
-              ]
-            })
-          ]
-        });
-        Packer.toBuffer(doc).then(buffer => {
-          fs.writeFileSync("TestDocument.docx", buffer);
-        });
+    response.data.forEach(data => {
+      doc.addSection({
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({ text: data.userId }).break(),
+              new TextRun({ text: data.id }).break(),
+              new TextRun({ text: data.title }).break(),
+              new TextRun({ text: data.body }).break()
+            ]
+          })
+        ]
       });
-    })
-    .then(() => res.json("completed"));
+    });
+    Packer.toBuffer(doc)
+      .then(async buffer => {
+        await fs.promises
+          .mkdir(path.join(__dirname, "../docs"), { recursive: true })
+          .then(() => fs.writeFileSync(`docs/${filename}.docx`, buffer));
+        res.send("Successfully converted to doc file.");
+      })
+      .catch(err => {
+        console.error(err);
+        res.send("Failed in converting to doc file.");
+      });
+  });
 };
 
 module.exports = {
-  convertAndUploadFile,
+  convertAndUploadPdfFile,
   convertAndSaveDocFile
 };
